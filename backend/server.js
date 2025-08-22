@@ -16,7 +16,7 @@ connectCloudinary();
 // middlewares
 app.use(express.json())
 app.use(cors({
-  origin: ["http://localhost:5173","http://localhost:5174"], // allow frontend
+  origin: ["https://gugugaga-two.vercel.app","https://gugugaga-72jw.vercel.app"], // allow frontend
   credentials: true
 }))
 
