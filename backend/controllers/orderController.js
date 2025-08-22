@@ -1,52 +1,48 @@
-import orderModel from "../models/orderModel.js"
-import userModel from "../models/userModel.js"
+import orderModel from "../models/orderModel.js";
+import userModel from "../models/userModel.js";
+import Razorpay from "razorpay";
 
+// Place Order (COD)
 const placeOrder = async (req, res) => {
-    try {
-        const { userId, items, amount, address} = req.body
-        const orderData = {
-            userId,
-            items,
-            amount,
-            address,
-            paymentMethod: "COD",
-            payment: false,
-            date: Date.now()
-        }
-        const newOrder = new orderModel(orderData)
-        await newOrder.save()
+  try {
+    const { userId, items, amount, address } = req.body;
+    const orderData = {
+      userId,
+      items,
+      amount,
+      address,
+      paymentMethod: "COD",
+      payment: false,
+      date: Date.now(),
+    };
+    const newOrder = new orderModel(orderData);
+    await newOrder.save();
 
-        await userModel.findByIdAndUpdate(userId, {cartData: {}})
+    await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-        res.json({success: true, message: "Order Placed"})
-    }
-    catch (error){
-        console.log(error)
-        res.json({success: false, message: error.message})
-    }
-}
+    res.json({ success: true, message: "Order Placed" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
-// Placing orders using stripe method
-const placeOrderStripe = async (req, res) => {
+// Stripe (not yet implemented)
+const placeOrderStripe = async (req, res) => {};
 
-}
-
-// Placing orders using Razorpay method
-const Razorpay = require("razorpay");
-
+// Razorpay instance
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,       // Your Razorpay key_id
-  key_secret: process.env.RAZORPAY_SECRET,   // Your Razorpay key_secret
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_SECRET,
 });
 
-// Placing orders using Razorpay method
+// Place Order with Razorpay
 const placeOrderRazorpay = async (req, res) => {
   try {
     const { amount, currency, receipt } = req.body;
 
-    // Ensure amount is in paise (e.g., ₹100 = 10000)
     const options = {
-      amount: amount * 100,
+      amount: amount * 100, // Razorpay expects paise
       currency: currency || "INR",
       receipt: receipt || `rcpt_${Date.now()}`,
     };
@@ -59,7 +55,6 @@ const placeOrderRazorpay = async (req, res) => {
       currency: order.currency,
       amount: order.amount,
     });
-
   } catch (error) {
     console.error("Razorpay order error:", error);
     return res.status(500).json({
@@ -70,45 +65,47 @@ const placeOrderRazorpay = async (req, res) => {
   }
 };
 
-module.exports = { placeOrderRazorpay };
-
-
-// All orders data for admin panel
+// Get all orders (Admin)
 const allOrders = async (req, res) => {
-    try{
-        const orders = await orderModel.find({})
-        res.json({success: true, orders})
-    }
-    catch(error){
-        console.log(error)
-        res.json({success: false, message: error.message})
-    }
-}
+  try {
+    const orders = await orderModel.find({});
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
-// User order data for frontend
+// Get user orders
 const userOrders = async (req, res) => {
-    try{
-        const {userId} = req.body
-        const orders = await orderModel.find({userId})
-        res.json({success: true, orders})
-    }
-    catch (error){
-        console.log(error)
-        res.json({success: false, message: error.message})
-    }
-}
+  try {
+    const { userId } = req.body;
+    const orders = await orderModel.find({ userId });
+    res.json({ success: true, orders });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
 // Update order status
 const updateStatus = async (req, res) => {
-    try{
-        const {orderId, status} = req.body
-        await orderModel.findByIdAndUpdate(orderId, {status})
-        res.json({success: true, message: "Order Status Updated"})
-    }
-    catch (error){
-        console.log(error)
-        res.json({success: false, message: error.message})
-    }
-}
+  try {
+    const { orderId, status } = req.body;
+    await orderModel.findByIdAndUpdate(orderId, { status });
+    res.json({ success: true, message: "Order Status Updated" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
-export {placeOrder, placeOrderRazorpay, placeOrderStripe, allOrders, updateStatus, userOrders}
+// ✅ ES Module exports only
+export {
+  placeOrder,
+  placeOrderRazorpay,
+  placeOrderStripe,
+  allOrders,
+  updateStatus,
+  userOrders,
+};

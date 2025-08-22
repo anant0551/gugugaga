@@ -7,6 +7,21 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => {
+      resolve(true);
+    };
+    script.onerror = () => {
+      resolve(false);
+    };
+    document.body.appendChild(script);
+  });
+};
+
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const { backendUrl, token, cartItems, setCartItems, getCartAmount, delivery_fee, products } = useContext(ShopContext);
@@ -54,18 +69,18 @@ const PlaceOrder = () => {
         amount: getCartAmount() + delivery_fee
       };
 
-      switch (method) {
+switch (method) {
   case 'cod': {
     const response = await axios.post(
-  backendUrl + '/api/order/place',
-  orderData,
-  {
-    headers: {
-      token: token,
-      "Content-Type": "application/json"
-    }
-  }
-);
+      backendUrl + '/api/order/place',
+      orderData,
+      {
+        headers: {
+          token: token,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
     if (response.data.success) {
       setCartItems({});
@@ -76,10 +91,71 @@ const PlaceOrder = () => {
     break;
   }
 
+  case 'stripe': {
+    // Call your backend to create Stripe Checkout session
+    const response = await axios.post(
+      backendUrl + '/api/order/stripe',
+      orderData,
+      {
+        headers: { token }
+      }
+    );
+
+    if (response.data.url) {
+      window.location.href = response.data.url; // redirect to Stripe Checkout
+    } else {
+      toast.error("Stripe payment failed to initiate.");
+    }
+    break;
+  }
+
+case 'razorpay': {
+  const response = await axios.post(
+    backendUrl + '/api/order/razorpay',
+    { amount: orderData.amount },
+    { headers: { token } }
+  );
+
+  if (response.data.success && response.data.orderId) {
+    const res = await loadRazorpayScript();
+    if (!res) {
+      toast.error("Razorpay SDK failed to load. Check your internet.");
+      return;
+    }
+
+    const options = {
+      key: import.meta.env.VITE_RAZORPAY_KEY,
+      amount: response.data.amount,
+      currency: response.data.currency,
+      name: "My Shop",
+      description: "Order Payment",
+      order_id: response.data.orderId,
+      handler: function (paymentResult) {
+        toast.success("Payment Successful!");
+        navigate('/orders');
+      },
+      prefill: {
+        name: formData.firstName + " " + formData.lastName,
+        email: formData.email,
+        contact: formData.phone,
+      }
+    };
+
+    const rzp = new window.Razorpay(options);
+    console.log("Razorpay Key:", import.meta.env.VITE_RAZORPAY_KEY);
+    rzp.open();
+  } else {
+    toast.error("Razorpay payment failed to initiate.");
+  }
+  break;
+}
+
+
   default:
     toast.info("Payment method not implemented yet.");
     break;
 }
+
 
 
     } catch (error) {
